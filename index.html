@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業版遺產稅試算與預留稅源推演系統</title>
+    <title>專業版遺產稅試算與保險預留稅源推演系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -24,14 +24,13 @@
 </head>
 <body class="text-slate-200 flex flex-col justify-center items-center p-2 sm:p-4">
 
-<!-- 主卡片：鎖定最大高度與寬度，杜絕畫面往下延伸 -->
-<div class="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+<div class="w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden flex flex-col">
     
-    <!-- 頂部列 (Header) -->
+    <!-- 頂部 Header -->
     <div class="px-5 py-2.5 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
         <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <h1 class="text-sm sm:text-base font-bold text-white tracking-wide">遺產稅精算與稅源缺口推演</h1>
+            <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+            <h1 class="text-sm sm:text-base font-bold text-white tracking-wide">遺產稅精算與保險預留稅源推演</h1>
             <span class="text-[11px] text-slate-400 hidden sm:inline">| 純本地即時計算・無資料外流風險</span>
         </div>
         <div class="flex bg-slate-800 rounded p-0.5 text-xs">
@@ -40,7 +39,7 @@
         </div>
     </div>
 
-    <!-- 內容核心區：雙欄網格 -->
+    <!-- 內容主網格 (左7 : 右5) -->
     <div class="grid grid-cols-1 md:grid-cols-12 text-xs">
         
         <!-- 左側輸入區 (7欄) -->
@@ -58,9 +57,9 @@
                 <div class="bg-slate-800/40 p-2 rounded border border-slate-700/60">
                     <div class="flex justify-between text-[11px] text-slate-400 mb-1">
                         <span>不流動資產比例 (不動產/未上市股)</span>
-                        <span id="txtIlliquid" class="text-amber-400 font-bold">80%</span>
+                        <span id="txtIlliquid" class="text-amber-400 font-bold">85%</span>
                     </div>
-                    <input type="range" id="rngIlliquid" min="10" max="95" value="80" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer accent-blue-500" oninput="document.getElementById('txtIlliquid').textContent=this.value+'%'">
+                    <input type="range" id="rngIlliquid" min="10" max="95" value="85" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer accent-blue-500" oninput="document.getElementById('txtIlliquid').textContent=this.value+'%'">
                 </div>
             </div>
 
@@ -68,7 +67,7 @@
             <div id="boxDetail" class="hidden grid grid-cols-2 gap-2 bg-slate-800/40 p-2 rounded border border-slate-700/60">
                 <div>
                     <label class="block text-[10px] text-slate-400 mb-0.5">房地產現值 (萬元)</label>
-                    <input type="number" id="dRealEstate" value="4500" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white">
+                    <input type="number" id="dRealEstate" value="5000" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white">
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-400 mb-0.5">上市櫃股票 (萬元)</label>
@@ -76,11 +75,11 @@
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-400 mb-0.5">未上市股權 (萬元)</label>
-                    <input type="number" id="dPrivateStock" value="1000" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white">
+                    <input type="number" id="dPrivateStock" value="800" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white">
                 </div>
                 <div>
                     <label class="block text-[10px] text-blue-400 mb-0.5 font-bold">活定存現金 (萬元)</label>
-                    <input type="number" id="dCash" value="1000" class="w-full bg-slate-800 border border-blue-500/50 rounded px-2 py-1 text-blue-300 font-bold">
+                    <input type="number" id="dCash" value="700" class="w-full bg-slate-800 border border-blue-500/50 rounded px-2 py-1 text-blue-300 font-bold">
                 </div>
             </div>
 
@@ -88,7 +87,7 @@
             <div class="space-y-1.5 pt-1">
                 <div class="flex justify-between items-center text-[11px]">
                     <span class="font-bold text-slate-300">法定扣除額與親屬狀況</span>
-                    <span class="text-slate-500">免稅額基準 1,333萬 + 喪葬 138萬</span>
+                    <span class="text-slate-500">免稅基準 1,333萬 + 喪葬 138萬</span>
                 </div>
                 <div class="grid grid-cols-2 gap-1.5">
                     <label class="flex items-center gap-1.5 bg-slate-800/60 px-2 py-1.5 rounded border border-slate-700 cursor-pointer">
@@ -110,7 +109,7 @@
                 </div>
             </div>
 
-            <!-- 配偶請求權 -->
+            <!-- 配偶剩餘財產請求權 -->
             <div class="bg-amber-950/20 border border-amber-800/40 p-2 rounded text-[11px] space-y-1">
                 <label class="flex items-center gap-1.5 font-medium text-amber-200 cursor-pointer">
                     <input type="checkbox" id="chkClaim" class="w-3.5 h-3.5 accent-amber-500" onchange="toggleClaim()">
@@ -123,12 +122,35 @@
                 </div>
             </div>
 
+            <!-- 保險預留稅源規劃設定 (年齡輸入與槓桿) -->
+            <div class="bg-cyan-950/30 border border-cyan-800/50 p-2.5 rounded-lg space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                        🛡️ 預留稅源保險規劃試算
+                    </span>
+                    <span class="text-[10px] text-cyan-400">年齡越輕，槓桿效益越高</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                    <div class="flex items-center justify-between bg-slate-800/80 px-2 py-1.5 rounded border border-slate-700">
+                        <span class="text-slate-400">被保人規劃年齡：</span>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="insAge" value="50" min="30" max="75" step="1" class="w-12 bg-slate-700 rounded text-center text-cyan-300 font-bold text-xs">
+                            <span class="text-slate-400">歲</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between bg-slate-800/80 px-2 py-1.5 rounded border border-slate-700">
+                        <span class="text-slate-400">預估身故保障槓桿：</span>
+                        <span id="txtLeverage" class="font-bold text-cyan-300 text-xs">約 2.0 倍</span>
+                    </div>
+                </div>
+            </div>
+
             <button onclick="calculateAll()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded text-xs transition">
-                重新計算
+                更新試算與比較
             </button>
         </div>
 
-        <!-- 右側診斷看板與固定圖表 (5欄) -->
+        <!-- 右側：診斷看板、固定圖表與比較表 (5欄) -->
         <div class="md:col-span-5 p-4 bg-slate-950/40 flex flex-col justify-between space-y-2.5">
             
             <!-- 數據總覽 -->
@@ -148,28 +170,54 @@
             <!-- 現金缺口警告框 -->
             <div id="boxGap" class="p-2.5 rounded border text-xs">
                 <div class="flex justify-between items-center">
-                    <span class="font-bold" id="lblGapTitle">繳稅現金自籌缺口</span>
+                    <span class="font-bold" id="lblGapTitle">自籌繳稅現金缺口</span>
                     <span id="badgeGap" class="px-1.5 py-0.2 rounded text-[10px] font-bold">警示</span>
                 </div>
                 <div id="valGap" class="text-xl font-black mt-0.5">- 0 萬元</div>
                 <p id="txtGapDesc" class="text-[10px] opacity-80 mt-0.5 leading-snug">
-                    繼承人須在 2 個月內完稅，否則面臨滯納金或資產處分問題。
+                    繼承人須在 2 個月期限內完稅，否則面臨滯納金或資產處分問題。
                 </p>
             </div>
 
-            <!-- 圖表展示區：使用固定內聯樣式鎖死高度，徹底杜絕無限延伸 -->
+            <!-- 兩方案對照比較表 (核心新增) -->
+            <div class="bg-slate-800/50 rounded-lg p-2 border border-slate-700/60 space-y-1.5 text-[11px]">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+                    <span>籌稅方案對照</span>
+                    <span class="text-cyan-400">以保險填平缺口推演</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <!-- 方案 A：無預留 (自籌) -->
+                    <div class="bg-rose-950/20 border border-rose-900/40 p-2 rounded flex flex-col justify-between">
+                        <div class="font-bold text-rose-300">傳統自籌 / 變賣</div>
+                        <div class="text-[10px] text-slate-400 mt-1 space-y-0.5">
+                            <div>• 耗費現金：<span id="planANeed" class="font-bold text-rose-400">0 萬</span></div>
+                            <div>• 到款時間：遺產凍結，無現款</div>
+                            <div>• 變現折損：實物抵繳折損4-6成</div>
+                        </div>
+                    </div>
+                    <!-- 方案 B：保險預留稅源 -->
+                    <div class="bg-cyan-950/30 border border-cyan-800/50 p-2 rounded flex flex-col justify-between">
+                        <div class="font-bold text-cyan-300">保險身故給付代繳</div>
+                        <div class="text-[10px] text-slate-300 mt-1 space-y-0.5">
+                            <div>• 投入保費：<span id="planBCost" class="font-bold text-cyan-400">約 0 萬</span></div>
+                            <div>• 到款時間：3~7天專款給付</div>
+                            <div>• 遺產防護：<span class="text-emerald-400 font-bold">完全保全家產</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 圖表展示區 (高度固定 130px，防拉伸) -->
             <div class="bg-slate-800/40 p-2 rounded border border-slate-700/60 flex flex-col items-center">
-                <span class="text-[10px] text-slate-400 mb-1">資產與缺口比例</span>
-                <!-- 容器絕對定高 150px，overflow hidden -->
-                <div style="position: relative; height: 140px; width: 100%; max-width: 260px; overflow: hidden;">
+                <div style="position: relative; height: 130px; width: 100%; max-width: 250px; overflow: hidden;">
                     <canvas id="balanceChart"></canvas>
                 </div>
             </div>
 
-            <!-- 關鍵提示 -->
-            <div class="text-[10px] text-slate-400 bg-slate-900 p-2 rounded border border-slate-800 flex items-start gap-1">
-                <span class="text-amber-400 shrink-0">💡</span>
-                <span>人壽保險身故保險金指定受益人，免經遺產凍結，可迅速支應稅源避免賤賣家產。</span>
+            <!-- 法規備忘 -->
+            <div class="text-[10px] text-slate-400 bg-slate-900 p-1.5 rounded border border-slate-800 flex items-start gap-1">
+                <span class="text-amber-400 shrink-0">📌</span>
+                <span>指定受益人人壽保險金不計入遺產總額（保險法第112條）；每一申報戶死亡給付免稅額最高為 3,740 萬元（最低稅負制）。</span>
             </div>
 
         </div>
@@ -193,6 +241,18 @@ function switchMode(mode) {
 function toggleClaim() {
     document.getElementById('boxClaimInput').classList.toggle('hidden', !document.getElementById('chkClaim').checked);
     calculateAll();
+}
+
+// 根據年齡推估壽險槓桿倍數 (精算模型經驗估值)
+function getInsuranceLeverage(age) {
+    if (age <= 40) return 2.8;
+    if (age <= 45) return 2.4;
+    if (age <= 50) return 2.0;
+    if (age <= 55) return 1.7;
+    if (age <= 60) return 1.5;
+    if (age <= 65) return 1.3;
+    if (age <= 70) return 1.15;
+    return 1.05;
 }
 
 function calculateAll() {
@@ -240,6 +300,11 @@ function calculateAll() {
     cash = Math.round(cash);
     const gap = tax > cash ? tax - cash : 0;
 
+    // 年齡與槓桿率
+    const age = parseInt(document.getElementById('insAge').value) || 50;
+    const leverage = getInsuranceLeverage(age);
+    document.getElementById('txtLeverage').textContent = `約 ${leverage.toFixed(1)} 倍`;
+
     // 介面更新
     document.getElementById('valTax').textContent = tax.toLocaleString() + " 萬";
     document.getElementById('valRate').textContent = "稅率: " + rateStr;
@@ -250,17 +315,25 @@ function calculateAll() {
     const valGap = document.getElementById('valGap');
 
     if (gap > 0) {
-        boxGap.className = "p-2.5 rounded border bg-rose-950/40 border-rose-800 text-rose-200 text-xs";
+        boxGap.className = "p-2 rounded border bg-rose-950/40 border-rose-800 text-rose-200 text-xs";
         badgeGap.className = "px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-900 text-rose-100";
-        badgeGap.textContent = "缺口過大";
+        badgeGap.textContent = "資金缺口";
         valGap.className = "text-xl font-black text-rose-400 mt-0.5";
         valGap.textContent = "- " + gap.toLocaleString() + " 萬元";
+
+        // 更新方案對照
+        document.getElementById('planANeed').textContent = `${gap.toLocaleString()} 萬全額`;
+        const insPremium = Math.round(gap / leverage);
+        document.getElementById('planBCost').textContent = `約 ${insPremium.toLocaleString()} 萬 (槓桿${leverage.toFixed(1)}x)`;
     } else {
-        boxGap.className = "p-2.5 rounded border bg-emerald-950/40 border-emerald-800 text-emerald-200 text-xs";
+        boxGap.className = "p-2 rounded border bg-emerald-950/40 border-emerald-800 text-emerald-200 text-xs";
         badgeGap.className = "px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-900 text-emerald-100";
         badgeGap.textContent = "安全";
         valGap.className = "text-xl font-black text-emerald-400 mt-0.5";
         valGap.textContent = "流動性充足";
+
+        document.getElementById('planANeed').textContent = "0 萬 (無缺口)";
+        document.getElementById('planBCost').textContent = "0 萬 (目前充足)";
     }
 
     renderChart(totalAsset - cash, cash, tax, gap);
@@ -275,7 +348,7 @@ function renderChart(illiquid, cash, tax, gap) {
         : [illiquid, Math.max(0, cash - tax), tax];
 
     const labels = gap > 0 
-        ? ['不流動資產', '自有現金', '稅源缺口']
+        ? ['不流動資產', '自有現金', '自籌缺口']
         : ['不流動資產', '稅後剩餘現金', '應納稅額'];
 
     const colors = gap > 0 
@@ -295,7 +368,7 @@ function renderChart(illiquid, cash, tax, gap) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: false, // 關閉動畫，徹底防止連續 resize 事件觸發無限生長
+            animation: false,
             plugins: {
                 legend: { 
                     position: 'right', 
@@ -311,7 +384,7 @@ function renderChart(illiquid, cash, tax, gap) {
     });
 }
 
-// 監聽所有輸入
+// 實時監聽全部欄位
 document.querySelectorAll('input').forEach(input => {
     input.addEventListener('input', calculateAll);
 });
