@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業版遺產稅試算與預留稅源推演系統</title>
+    <title>傳承預留稅源試算</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -11,165 +11,388 @@
             height: 100%;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
+            overflow: hidden; /* 徹底鎖定視窗高度，杜絕外部空白延伸 */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
             background-color: #0b0f19;
         }
-        .tab-btn.active {
-            background-color: #1e293b;
-            color: #38bdf8;
+        .mode-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
             font-weight: 700;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
         }
+        /* 自訂細緻捲軸，讓精算版表單在固定高度內滑順捲動 */
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
-<body class="text-slate-200 flex flex-col justify-center items-center p-2 sm:p-4">
+<body class="text-slate-200 flex justify-center items-center p-2 sm:p-4">
 
-<!-- 主卡片：鎖定最大高度與寬度，杜絕畫面往下延伸 -->
-<div class="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+<div class="w-full max-w-6xl h-[94vh] max-h-[820px] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden flex flex-col">
     
-    <!-- 頂部列 (Header) -->
-    <div class="px-5 py-2.5 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
+    <!-- 頂部 Header：通用標題 + 雙模式切換 -->
+    <div class="px-5 py-2.5 bg-slate-950 border-b border-slate-800 flex flex-wrap justify-between items-center gap-2 shrink-0">
         <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <h1 class="text-sm sm:text-base font-bold text-white tracking-wide">遺產稅精算與稅源缺口推演</h1>
-            <span class="text-[11px] text-slate-400 hidden sm:inline">| 純本地即時計算・無資料外流風險</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+            <h1 class="text-sm sm:text-base font-bold text-white tracking-wide">遺產稅即時推演與預留稅源評估</h1>
+            <span class="text-[11px] text-slate-400 hidden lg:inline">| 純本地瀏覽器運算・不留存任何個人資料</span>
         </div>
-        <div class="flex bg-slate-800 rounded p-0.5 text-xs">
-            <button id="btnBasic" onclick="switchMode('basic')" class="tab-btn active px-3 py-1 rounded transition">總額速算</button>
-            <button id="btnDetail" onclick="switchMode('detail')" class="tab-btn px-3 py-1 rounded text-slate-400 transition">資產細項</button>
+        
+        <!-- 粗略 vs 仔細 模式切換 -->
+        <div class="flex bg-slate-800/90 p-1 rounded-lg border border-slate-700 text-xs">
+            <button id="btnRough" onclick="switchMode('rough')" class="mode-btn active px-3.5 py-1 rounded-md transition">
+                粗略盲測版 (隱私區間)
+            </button>
+            <button id="btnDetailed" onclick="switchMode('detailed')" class="mode-btn px-3.5 py-1 rounded-md text-slate-400 hover:text-white transition">
+                仔細精算版 (國稅局附表全收錄)
+            </button>
         </div>
     </div>
 
-    <!-- 內容核心區：雙欄網格 -->
-    <div class="grid grid-cols-1 md:grid-cols-12 text-xs">
+    <!-- 主工作區 (左7 : 右5)，內部獨立捲動 -->
+    <div class="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0 text-xs">
         
-        <!-- 左側輸入區 (7欄) -->
-        <div class="md:col-span-7 p-4 space-y-3 border-b md:border-b-0 md:border-r border-slate-800">
+        <!-- 左側輸入區 (7欄，支援內部獨立捲動) -->
+        <div class="md:col-span-7 p-4 overflow-y-auto custom-scroll space-y-3 border-b md:border-b-0 md:border-r border-slate-800">
             
-            <!-- 模式一：總量速算 -->
-            <div id="boxBasic" class="space-y-2.5">
-                <div class="flex items-center justify-between">
-                    <span class="text-slate-300 font-medium">預估遺產總額</span>
-                    <div class="flex items-center gap-1">
-                        <input type="number" id="baseTotal" value="8000" step="100" class="w-24 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-right text-white font-bold outline-none focus:border-blue-500">
-                        <span class="text-slate-400 text-[11px]">萬元</span>
-                    </div>
+            <!-- ========================================== -->
+            <!-- 【模式一：粗略盲測版】 -->
+            <!-- ========================================== -->
+            <div id="panelRough" class="space-y-3">
+                <div class="bg-slate-800/40 p-3 rounded-lg border border-slate-700/60 space-y-2">
+                    <label class="block text-slate-200 font-bold text-xs">1. 概估家族總資產落點（不需填寫精確數字）</label>
+                    <select id="roughAssetRange" class="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-white font-bold text-xs outline-none focus:border-blue-500">
+                        <option value="3500">約 3,000 萬 ～ 5,000 萬（雙薪有房・小康傳承）</option>
+                        <option value="7500" selected>約 5,000 萬 ～ 1 億（中小企業主・多筆房產）</option>
+                        <option value="14000">約 1 億 ～ 2 億（高資產・資產配置多元）</option>
+                        <option value="26000">超過 2 億以上（高淨值家族傳承）</option>
+                    </select>
                 </div>
-                <div class="bg-slate-800/40 p-2 rounded border border-slate-700/60">
-                    <div class="flex justify-between text-[11px] text-slate-400 mb-1">
-                        <span>不流動資產比例 (不動產/未上市股)</span>
-                        <span id="txtIlliquid" class="text-amber-400 font-bold">80%</span>
-                    </div>
-                    <input type="range" id="rngIlliquid" min="10" max="95" value="80" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer accent-blue-500" oninput="document.getElementById('txtIlliquid').textContent=this.value+'%'">
-                </div>
-            </div>
 
-            <!-- 模式二：細項精算 -->
-            <div id="boxDetail" class="hidden grid grid-cols-2 gap-2 bg-slate-800/40 p-2 rounded border border-slate-700/60">
-                <div>
-                    <label class="block text-[10px] text-slate-400 mb-0.5">房地產現值 (萬元)</label>
-                    <input type="number" id="dRealEstate" value="4500" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white">
+                <div class="bg-slate-800/40 p-3 rounded-lg border border-slate-700/60">
+                    <div class="flex justify-between text-[11px] text-slate-200 mb-1.5">
+                        <span class="font-bold">2. 不流動資產佔比（房地產、未上市股等）</span>
+                        <span id="txtRoughIlliquid" class="text-amber-400 font-black">85%</span>
+                    </div>
+                    <input type="range" id="rngRoughIlliquid" min="40" max="95" value="85" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer accent-blue-500">
+                    <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                        <span>40% (現金充裕)</span>
+                        <span>70% (多數家庭常態)</span>
+                        <span>95% (幾乎全是不動產)</span>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-[10px] text-slate-400 mb-0.5">上市櫃股票 (萬元)</label>
-                    <input type="number" id="dPublicStock" value="1500" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white">
-                </div>
-                <div>
-                    <label class="block text-[10px] text-slate-400 mb-0.5">未上市股權 (萬元)</label>
-                    <input type="number" id="dPrivateStock" value="1000" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white">
-                </div>
-                <div>
-                    <label class="block text-[10px] text-blue-400 mb-0.5 font-bold">活定存現金 (萬元)</label>
-                    <input type="number" id="dCash" value="1000" class="w-full bg-slate-800 border border-blue-500/50 rounded px-2 py-1 text-blue-300 font-bold">
-                </div>
-            </div>
 
-            <!-- 免稅額與親屬條件 -->
-            <div class="space-y-1.5 pt-1">
-                <div class="flex justify-between items-center text-[11px]">
-                    <span class="font-bold text-slate-300">法定扣除額與親屬狀況</span>
-                    <span class="text-slate-500">免稅額基準 1,333萬 + 喪葬 138萬</span>
-                </div>
-                <div class="grid grid-cols-2 gap-1.5">
-                    <label class="flex items-center gap-1.5 bg-slate-800/60 px-2 py-1.5 rounded border border-slate-700 cursor-pointer">
-                        <input type="checkbox" id="chkSpouse" checked class="w-3.5 h-3.5 accent-blue-500">
-                        <span>配偶健在 (扣553萬)</span>
-                    </label>
-                    <div class="flex items-center justify-between bg-slate-800/60 px-2 py-1.5 rounded border border-slate-700">
-                        <span class="text-slate-400">成年子女數：</span>
-                        <input type="number" id="numChild" value="2" min="0" max="8" class="w-10 bg-slate-700 rounded text-center text-white font-bold">
-                    </div>
-                    <div class="flex items-center justify-between bg-slate-800/60 px-2 py-1.5 rounded border border-slate-700">
-                        <span class="text-slate-400">父母健在數：</span>
-                        <input type="number" id="numParents" value="0" min="0" max="2" class="w-10 bg-slate-700 rounded text-center text-white font-bold">
-                    </div>
-                    <div class="flex items-center justify-between bg-slate-800/60 px-2 py-1.5 rounded border border-slate-700">
-                        <span class="text-slate-400">重度身障數：</span>
-                        <input type="number" id="numDisability" value="0" min="0" max="4" class="w-10 bg-slate-700 rounded text-center text-white font-bold">
+                <!-- 粗略版基礎親屬 -->
+                <div class="bg-slate-800/40 p-3 rounded-lg border border-slate-700/60 space-y-2">
+                    <span class="font-bold text-slate-200 block">3. 基礎繼承人狀況</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2 bg-slate-800 px-2.5 py-2 rounded border border-slate-700 cursor-pointer">
+                            <input type="checkbox" id="roughSpouse" checked class="w-3.5 h-3.5 accent-blue-500">
+                            <span>配偶健在 (扣 553 萬)</span>
+                        </label>
+                        <div class="flex items-center justify-between bg-slate-800 px-2.5 py-2 rounded border border-slate-700">
+                            <span class="text-slate-300">繼承子女數：</span>
+                            <input type="number" id="roughChild" value="2" min="0" max="10" class="w-12 bg-slate-700 rounded text-center text-white font-bold py-0.5">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 配偶請求權 -->
-            <div class="bg-amber-950/20 border border-amber-800/40 p-2 rounded text-[11px] space-y-1">
-                <label class="flex items-center gap-1.5 font-medium text-amber-200 cursor-pointer">
-                    <input type="checkbox" id="chkClaim" class="w-3.5 h-3.5 accent-amber-500" onchange="toggleClaim()">
-                    <span>啟用配偶剩餘財產請求權 (民法第1030-1條扣除)</span>
-                </label>
-                <div id="boxClaimInput" class="hidden pl-5 pt-0.5 flex items-center gap-1.5 text-amber-300">
-                    <span>扣除額度：</span>
-                    <input type="number" id="claimAmount" value="1500" class="w-20 bg-slate-800 border border-amber-700 rounded px-1.5 py-0.5 text-right font-bold text-white">
-                    <span>萬元</span>
+            <!-- ========================================== -->
+            <!-- 【模式二：仔細精算版（國稅局附表一至附表八全收錄）】 -->
+            <!-- ========================================== -->
+            <div id="panelDetailed" class="hidden space-y-3">
+                
+                <!-- 區塊 A：應計入遺產總額財產（附表一 ～ 附表六） -->
+                <div class="bg-slate-800/40 p-3 rounded-lg border border-slate-700/60 space-y-2.5">
+                    <div class="flex justify-between items-center border-b border-slate-700/80 pb-1.5">
+                        <span class="font-bold text-blue-300 text-xs">一、應稅遺產總額明細（國稅局附表一 ～ 附表六，單位：萬元）</span>
+                        <span id="txtDetailTotalGross" class="text-xs text-white font-black bg-blue-950 px-2 py-0.5 rounded border border-blue-800">總額：8,000 萬</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <!-- 附表一 & 二 -->
+                        <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <label class="block text-[11px] font-bold text-slate-200">【附表一、二】土地與房屋</label>
+                            <span class="block text-[10px] text-slate-400 mb-1">填土地公告現值＋房屋評定現值（非市價）</span>
+                            <input type="number" id="fRealEstate" value="4500" step="100" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white font-bold">
+                        </div>
+
+                        <!-- 附表三（流動現金） -->
+                        <div class="bg-slate-900/60 p-2 rounded border border-blue-900/50">
+                            <label class="block text-[11px] font-bold text-blue-300">【附表三】銀行存款與現金（流動）</label>
+                            <span class="block text-[10px] text-slate-400 mb-1">死亡日活存、定存、外幣存款餘額</span>
+                            <input type="number" id="fCash" value="700" step="50" class="w-full bg-slate-800 border border-blue-600/50 rounded px-2 py-1 text-blue-300 font-bold">
+                        </div>
+
+                        <!-- 附表三（非流動動產） -->
+                        <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <label class="block text-[11px] font-bold text-slate-200">【附表三】黃金、珠寶、汽機車與債權</label>
+                            <span class="block text-[10px] text-slate-400 mb-1">死亡日牌價、鑑價現值或應收債權</span>
+                            <input type="number" id="fOtherMovable" value="200" step="50" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white font-bold">
+                        </div>
+
+                        <!-- 附表四（上市櫃有價證券） -->
+                        <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <label class="block text-[11px] font-bold text-slate-200">【附表四】上市櫃股票、ETF 與基金</label>
+                            <span class="block text-[10px] text-slate-400 mb-1">死亡日收盤價或基金淨值計算</span>
+                            <input type="number" id="fPublicStock" value="1200" step="50" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white font-bold">
+                        </div>
+
+                        <!-- 附表四（未上市櫃 & 保單價值） -->
+                        <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <label class="block text-[11px] font-bold text-slate-200">【附表四】未上市櫃股票 / 他人保單價值</label>
+                            <span class="block text-[10px] text-slate-400 mb-1">公司資產淨值；被繼承人為要保人之保價金</span>
+                            <input type="number" id="fPrivateStock" value="800" step="50" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white font-bold">
+                        </div>
+
+                        <!-- 附表五（有限公司出資額與權利） -->
+                        <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <label class="block text-[11px] font-bold text-slate-200">【附表五】有限公司出資額 / 權利</label>
+                            <span class="block text-[10px] text-slate-400 mb-1">有限公司資本額（依淨值）、專利商標權</span>
+                            <input type="number" id="fRights" value="400" step="50" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white font-bold">
+                        </div>
+
+                        <!-- 附表六（死亡前二年內贈與） -->
+                        <div class="sm:col-span-2 bg-amber-950/20 p-2 rounded border border-amber-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <label class="block text-[11px] font-bold text-amber-300">【附表六】死亡前 2 年內贈與特定親屬財產</label>
+                                <span class="block text-[10px] text-amber-200/70">贈與配偶、子女、孫輩、父母、兄弟姊妹等，強制併入遺產（按死亡時價值）</span>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <input type="number" id="fGift2Yr" value="200" step="50" class="w-24 bg-slate-800 border border-amber-700/60 rounded px-2 py-1 text-right text-amber-300 font-bold">
+                                <span class="text-slate-400">萬元</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 區塊 B：附表七（不計入遺產總額之指定受益人壽險） -->
+                <div class="bg-cyan-950/20 p-3 rounded-lg border border-cyan-800/50 space-y-1.5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <label class="block text-[11px] font-bold text-cyan-300">二、【附表七】不計入遺產總額：指定受益人之人壽保險給付</label>
+                            <span class="block text-[10px] text-cyan-200/70">依《遺贈稅法》第16條第9款不計入遺產課稅，且可作為完稅現金來源</span>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <input type="number" id="fExemptIns" value="0" step="100" class="w-24 bg-slate-800 border border-cyan-600/60 rounded px-2 py-1 text-right text-cyan-300 font-bold">
+                            <span class="text-slate-400">萬元</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 區塊 C：附表八（完整親屬扣除額與各項扣除） -->
+                <div class="bg-slate-800/40 p-3 rounded-lg border border-slate-700/60 space-y-2.5">
+                    <div class="flex justify-between items-center border-b border-slate-700/80 pb-1.5">
+                        <span class="font-bold text-emerald-300 text-xs">三、【附表八】扣除額與免稅額明細（基準免稅額 1,333 萬）</span>
+                        <span id="txtDetailTotalDeduct" class="text-xs text-emerald-300 font-bold">總免扣額：2,136 萬</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <!-- 配偶 -->
+                        <label class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-800 cursor-pointer">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="dSpouse" checked class="w-3.5 h-3.5 accent-emerald-500">
+                                <span class="font-bold text-slate-200">配偶扣除額</span>
+                            </div>
+                            <span class="text-emerald-400 font-bold">553 萬元</span>
+                        </label>
+
+                        <!-- 喪葬費（固定） -->
+                        <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <span class="text-slate-300">喪葬費扣除額（定額）</span>
+                            <span class="text-emerald-400 font-bold">138 萬元</span>
+                        </div>
+
+                        <!-- 成年子女 -->
+                        <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <div>
+                                <span class="block text-slate-200 font-bold">成年子女（滿18歲）</span>
+                                <span class="text-[10px] text-slate-400">每人固定扣除 56 萬元</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="number" id="dAdultChild" value="2" min="0" max="10" class="w-12 bg-slate-800 border border-slate-700 rounded text-center text-white font-bold py-0.5">
+                                <span class="text-slate-400">人</span>
+                            </div>
+                        </div>
+
+                        <!-- 父母 -->
+                        <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <div>
+                                <span class="block text-slate-200 font-bold">被繼承人父母健在</span>
+                                <span class="text-[10px] text-slate-400">每人固定扣除 138 萬元</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="number" id="dParents" value="0" min="0" max="2" class="w-12 bg-slate-800 border border-slate-700 rounded text-center text-white font-bold py-0.5">
+                                <span class="text-slate-400">人</span>
+                            </div>
+                        </div>
+
+                        <!-- 未成年子女動態加扣區（跨兩欄） -->
+                        <div class="sm:col-span-2 bg-slate-900/80 p-2 rounded border border-slate-700 space-y-1.5">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold text-slate-200">未成年子女（未滿18歲）</span>
+                                    <span class="text-[10px] text-slate-400 ml-1">基本 56 萬 ＋ 距滿18歲年數 × 56 萬/年</span>
+                                </div>
+                                <button type="button" onclick="addMinorChild()" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-0.5 rounded text-[11px] font-bold transition">
+                                    ＋ 新增未成年子女
+                                </button>
+                            </div>
+                            <div id="minorChildrenContainer" class="space-y-1.5">
+                                <!-- 動態生成的未成年子女年齡列 -->
+                            </div>
+                        </div>
+
+                        <!-- 重度身心障礙 -->
+                        <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <div>
+                                <span class="block text-slate-200 font-bold">重度以上身心障礙</span>
+                                <span class="text-[10px] text-slate-400">配偶/子女/父母每人加扣 693 萬</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="number" id="dDisability" value="0" min="0" max="5" class="w-12 bg-slate-800 border border-slate-700 rounded text-center text-white font-bold py-0.5">
+                                <span class="text-slate-400">人</span>
+                            </div>
+                        </div>
+
+                        <!-- 受扶養兄弟姊妹祖父母 -->
+                        <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <div>
+                                <span class="block text-slate-200 font-bold">受扶養兄弟姊妹/祖父母</span>
+                                <span class="text-[10px] text-slate-400">每人扣除 56 萬元（未成年另計）</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="number" id="dDependents" value="0" min="0" max="5" class="w-12 bg-slate-800 border border-slate-700 rounded text-center text-white font-bold py-0.5">
+                                <span class="text-slate-400">人</span>
+                            </div>
+                        </div>
+
+                        <!-- 未償債務 / 農地免稅 -->
+                        <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <div>
+                                <span class="block text-slate-200 font-bold">死亡前未償債務 / 稅捐</span>
+                                <span class="text-[10px] text-slate-400">房貸餘額、未繳綜所稅等</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="number" id="dDebt" value="0" step="50" class="w-16 bg-slate-800 border border-slate-700 rounded text-right px-1.5 text-white font-bold py-0.5">
+                                <span class="text-slate-400">萬</span>
+                            </div>
+                        </div>
+
+                        <!-- 農地 / 公設地扣除 -->
+                        <div class="flex items-center justify-between bg-slate-900/60 p-2 rounded border border-slate-800">
+                            <div>
+                                <span class="block text-slate-200 font-bold">作農業使用之農地扣除</span>
+                                <span class="text-[10px] text-slate-400">須具農用證明且列管5年</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <input type="number" id="dFarmLand" value="0" step="100" class="w-16 bg-slate-800 border border-slate-700 rounded text-right px-1.5 text-white font-bold py-0.5">
+                                <span class="text-slate-400">萬</span>
+                            </div>
+                        </div>
+
+                        <!-- 配偶剩餘財產差額分配請求權（民法第1030-1條） -->
+                        <div class="sm:col-span-2 bg-amber-950/20 border border-amber-800/40 p-2 rounded space-y-1">
+                            <label class="flex items-center justify-between cursor-pointer">
+                                <span class="font-bold text-amber-200 flex items-center gap-1.5">
+                                    <input type="checkbox" id="dUseClaim" class="w-3.5 h-3.5 accent-amber-500" onchange="toggleClaim()">
+                                    <span>配偶剩餘財產差額分配請求權（民法第 1030-1 條）</span>
+                                </span>
+                                <span class="text-[10px] text-amber-400">合法大額節稅核心</span>
+                            </label>
+                            <div id="boxClaimInput" class="hidden pl-5 pt-1 flex items-center justify-between text-amber-300">
+                                <span class="text-[10px]">婚後有償取得財產差額之半數扣除額：</span>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" id="dClaimAmount" value="1500" step="100" class="w-24 bg-slate-800 border border-amber-700 rounded px-2 py-0.5 text-right font-bold text-white">
+                                    <span>萬元</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <button onclick="calculateAll()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded text-xs transition">
-                重新計算
-            </button>
+            <!-- 通用預留稅源年齡槓桿設定 -->
+            <div class="bg-slate-800/60 border border-slate-700 p-2.5 rounded-lg flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-cyan-400 font-bold">🛡️ 預留稅源規劃年齡：</span>
+                    <input type="number" id="insAge" value="55" min="30" max="80" class="w-12 bg-slate-900 border border-slate-600 rounded text-center text-cyan-300 font-bold py-0.5">
+                    <span class="text-slate-400">歲</span>
+                </div>
+                <div class="text-slate-400">
+                    對應終身壽險參考槓桿：<span id="txtLeverage" class="font-bold text-cyan-300">約 1.7 倍</span>
+                </div>
+            </div>
+
         </div>
 
-        <!-- 右側診斷看板與固定圖表 (5欄) -->
-        <div class="md:col-span-5 p-4 bg-slate-950/40 flex flex-col justify-between space-y-2.5">
+        <!-- 右側：診斷看板、對比表與固定圖表 (5欄，無捲軸固定呈現) -->
+        <div class="md:col-span-5 p-4 bg-slate-950/40 flex flex-col justify-between space-y-2.5 overflow-y-auto custom-scroll">
             
             <!-- 數據總覽 -->
             <div class="grid grid-cols-2 gap-2 text-center">
-                <div class="bg-slate-800/70 p-2 rounded border border-slate-700">
-                    <span class="text-slate-400 text-[10px] block">預估應納遺產稅</span>
-                    <span id="valTax" class="text-base font-black text-white">0 萬</span>
-                    <span id="valRate" class="text-[9px] text-slate-400 block">級距: --</span>
+                <div class="bg-slate-800/80 p-2 rounded border border-slate-700">
+                    <span class="text-slate-400 text-[10px] block">預估應納遺產稅額</span>
+                    <span id="valTax" class="text-lg font-black text-white">0 萬</span>
+                    <span id="valRate" class="text-[10px] text-slate-400 block">課稅淨額: 0 萬 (10%)</span>
                 </div>
-                <div class="bg-slate-800/70 p-2 rounded border border-slate-700">
-                    <span class="text-slate-400 text-[10px] block">帳戶可用現金</span>
-                    <span id="valCash" class="text-base font-bold text-blue-400">0 萬</span>
-                    <span class="text-[9px] text-slate-400 block">未完稅前暫凍結</span>
+                <div class="bg-slate-800/80 p-2 rounded border border-slate-700">
+                    <span class="text-slate-400 text-[10px] block">帳上可用現金＋免稅保單</span>
+                    <span id="valCash" class="text-lg font-bold text-blue-400">0 萬</span>
+                    <span id="valCashSub" class="text-[10px] text-slate-400 block">銀行帳戶未完稅前遭凍結</span>
                 </div>
             </div>
 
             <!-- 現金缺口警告框 -->
             <div id="boxGap" class="p-2.5 rounded border text-xs">
                 <div class="flex justify-between items-center">
-                    <span class="font-bold" id="lblGapTitle">繳稅現金自籌缺口</span>
-                    <span id="badgeGap" class="px-1.5 py-0.2 rounded text-[10px] font-bold">警示</span>
+                    <span class="font-bold" id="lblGapTitle">繼承人自籌繳稅現金缺口</span>
+                    <span id="badgeGap" class="px-1.5 py-0.2 rounded text-[10px] font-bold">存在缺口</span>
                 </div>
                 <div id="valGap" class="text-xl font-black mt-0.5">- 0 萬元</div>
-                <p id="txtGapDesc" class="text-[10px] opacity-80 mt-0.5 leading-snug">
-                    繼承人須在 2 個月內完稅，否則面臨滯納金或資產處分問題。
+                <p id="txtGapDesc" class="text-[10px] opacity-85 mt-0.5 leading-snug">
+                    國稅局規定核發稅單後 2 個月內須完稅，未完稅前所有房產與存款不得過戶移轉。
                 </p>
             </div>
 
-            <!-- 圖表展示區：使用固定內聯樣式鎖死高度，徹底杜絕無限延伸 -->
+            <!-- 籌稅方式對比卡片 -->
+            <div class="bg-slate-800/50 rounded-lg p-2 border border-slate-700/60 space-y-1 text-[11px]">
+                <div class="text-[10px] font-bold text-slate-400 flex justify-between">
+                    <span>繳稅資金來源比較</span>
+                    <span class="text-cyan-400">如何化解現金缺口？</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <div class="bg-rose-950/20 border border-rose-900/40 p-1.5 rounded">
+                        <div class="font-bold text-rose-300">未規劃 (自籌/變賣)</div>
+                        <div class="text-[10px] text-slate-400 mt-0.5 space-y-0.5">
+                            <div>• 需自籌：<span id="planANeed" class="font-bold text-rose-400">0 萬</span></div>
+                            <div>• 實物抵繳折損 4～6 成</div>
+                        </div>
+                    </div>
+                    <div class="bg-cyan-950/30 border border-cyan-800/50 p-1.5 rounded">
+                        <div class="font-bold text-cyan-300">人壽保險預留稅源</div>
+                        <div class="text-[10px] text-slate-300 mt-0.5 space-y-0.5">
+                            <div>• 預估成本：<span id="planBCost" class="font-bold text-cyan-400">約 0 萬</span></div>
+                            <div>• 免凍結直撥受益人</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 圖表區：絕對鎖定高度 135px，杜絕往下延伸空白 -->
             <div class="bg-slate-800/40 p-2 rounded border border-slate-700/60 flex flex-col items-center">
-                <span class="text-[10px] text-slate-400 mb-1">資產與缺口比例</span>
-                <!-- 容器絕對定高 150px，overflow hidden -->
-                <div style="position: relative; height: 140px; width: 100%; max-width: 260px; overflow: hidden;">
+                <div style="position: relative; height: 135px; width: 100%; max-width: 260px; overflow: hidden;">
                     <canvas id="balanceChart"></canvas>
                 </div>
             </div>
 
-            <!-- 關鍵提示 -->
-            <div class="text-[10px] text-slate-400 bg-slate-900 p-2 rounded border border-slate-800 flex items-start gap-1">
+            <!-- 法規備忘 -->
+            <div class="text-[10px] text-slate-400 bg-slate-900 p-1.5 rounded border border-slate-800 flex items-start gap-1">
                 <span class="text-amber-400 shrink-0">💡</span>
-                <span>人壽保險身故保險金指定受益人，免經遺產凍結，可迅速支應稅源避免賤賣家產。</span>
+                <span>依《遺贈稅法》第16條及《保險法》第112條，指定受益人之人壽身故保險金不計入遺產總額；每一申報戶死亡給付免稅額最高為 3,740 萬元。</span>
             </div>
 
         </div>
@@ -177,52 +400,143 @@
 </div>
 
 <script>
-let currentMode = 'basic';
+let currentMode = 'rough';
 let chartInstance = null;
+let minorChildrenAges = []; // 存放未成年子女實際年齡
 
 function switchMode(mode) {
     currentMode = mode;
-    document.getElementById('btnBasic').className = mode === 'basic' ? 'tab-btn active px-3 py-1 rounded' : 'tab-btn px-3 py-1 rounded text-slate-400';
-    document.getElementById('btnDetail').className = mode === 'detail' ? 'tab-btn active px-3 py-1 rounded' : 'tab-btn px-3 py-1 rounded text-slate-400';
+    document.getElementById('btnRough').className = mode === 'rough' ? 'mode-btn active px-3.5 py-1 rounded-md transition' : 'mode-btn px-3.5 py-1 rounded-md text-slate-400 hover:text-white transition';
+    document.getElementById('btnDetailed').className = mode === 'detailed' ? 'mode-btn active px-3.5 py-1 rounded-md transition' : 'mode-btn px-3.5 py-1 rounded-md text-slate-400 hover:text-white transition';
     
-    document.getElementById('boxBasic').classList.toggle('hidden', mode !== 'basic');
-    document.getElementById('boxDetail').classList.toggle('hidden', mode !== 'detail');
+    document.getElementById('panelRough').classList.toggle('hidden', mode !== 'rough');
+    document.getElementById('panelDetailed').classList.toggle('hidden', mode !== 'detailed');
+
     calculateAll();
 }
 
 function toggleClaim() {
-    document.getElementById('boxClaimInput').classList.toggle('hidden', !document.getElementById('chkClaim').checked);
+    document.getElementById('boxClaimInput').classList.toggle('hidden', !document.getElementById('dUseClaim').checked);
     calculateAll();
 }
 
-function calculateAll() {
-    let totalAsset = 0;
-    let cash = 0;
+// 動態新增未成年子女（自動計算距滿18歲年數加扣）
+function addMinorChild(defaultAge = 10) {
+    minorChildrenAges.push(defaultAge);
+    renderMinorChildren();
+    calculateAll();
+}
 
-    if (currentMode === 'basic') {
-        totalAsset = parseFloat(document.getElementById('baseTotal').value) || 0;
-        const illiquidPct = parseFloat(document.getElementById('rngIlliquid').value) || 0;
-        cash = totalAsset * ((100 - illiquidPct) / 100);
+function removeMinorChild(index) {
+    minorChildrenAges.splice(index, 1);
+    renderMinorChildren();
+    calculateAll();
+}
+
+function updateMinorChildAge(index, val) {
+    let age = parseInt(val);
+    if (isNaN(age)) age = 0;
+    if (age < 0) age = 0;
+    if (age > 17) age = 17;
+    minorChildrenAges[index] = age;
+    renderMinorChildren();
+    calculateAll();
+}
+
+function renderMinorChildren() {
+    const container = document.getElementById('minorChildrenContainer');
+    if (minorChildrenAges.length === 0) {
+        container.innerHTML = `<div class="text-[10px] text-slate-500 italic">目前無未成年子女（若有未滿18歲子女，點擊右上方按鈕新增以計算加扣額）</div>`;
+        return;
+    }
+    container.innerHTML = minorChildrenAges.map((age, idx) => {
+        const yearsTo18 = Math.max(0, 18 - age);
+        const deduct = 56 + (yearsTo18 * 56);
+        return `
+            <div class="flex items-center justify-between bg-slate-800 px-2 py-1 rounded border border-slate-700 text-[11px]">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-slate-300">第 ${idx + 1} 位未成年子女：</span>
+                    <input type="number" min="0" max="17" value="${age}" onchange="updateMinorChildAge(${idx}, this.value)" class="w-11 bg-slate-700 rounded text-center text-white font-bold py-0.5">
+                    <span class="text-slate-400">歲 (距滿18歲差 ${yearsTo18} 年)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-emerald-400 font-bold">可扣 ${deduct.toLocaleString()} 萬</span>
+                    <button type="button" onclick="removeMinorChild(${idx})" class="text-rose-400 hover:text-rose-300 font-bold px-1">✕</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getInsuranceLeverage(age) {
+    if (age <= 40) return 2.8;
+    if (age <= 45) return 2.4;
+    if (age <= 50) return 2.0;
+    if (age <= 55) return 1.7;
+    if (age <= 60) return 1.45;
+    if (age <= 65) return 1.25;
+    if (age <= 70) return 1.12;
+    return 1.05;
+}
+
+function calculateAll() {
+    let grossEstate = 0;   // 應計入遺產總額
+    let liquidCash = 0;    // 帳上活定存現金
+    let exemptIns = 0;     // 附表七不計入遺產之指定受益人壽險
+    let totalDeductions = 1333 + 138; // 基本免稅額 1,333 萬 + 喪葬費 138 萬
+
+    if (currentMode === 'rough') {
+        grossEstate = parseFloat(document.getElementById('roughAssetRange').value) || 0;
+        const illiquidPct = parseFloat(document.getElementById('rngRoughIlliquid').value) || 0;
+        document.getElementById('txtRoughIlliquid').textContent = illiquidPct + '%';
+        liquidCash = grossEstate * ((100 - illiquidPct) / 100);
+
+        if (document.getElementById('roughSpouse').checked) totalDeductions += 553;
+        totalDeductions += (parseInt(document.getElementById('roughChild').value) || 0) * 56;
+
     } else {
-        const re = parseFloat(document.getElementById('dRealEstate').value) || 0;
-        const ps = parseFloat(document.getElementById('dPublicStock').value) || 0;
-        const privs = parseFloat(document.getElementById('dPrivateStock').value) || 0;
-        const c = parseFloat(document.getElementById('dCash').value) || 0;
-        totalAsset = re + ps + privs + c;
-        cash = c;
+        // 附表一至附表六加總
+        const re = parseFloat(document.getElementById('fRealEstate').value) || 0;
+        const cash = parseFloat(document.getElementById('fCash').value) || 0;
+        const movable = parseFloat(document.getElementById('fOtherMovable').value) || 0;
+        const pubStock = parseFloat(document.getElementById('fPublicStock').value) || 0;
+        const privStock = parseFloat(document.getElementById('fPrivateStock').value) || 0;
+        const rights = parseFloat(document.getElementById('fRights').value) || 0;
+        const gift2Yr = parseFloat(document.getElementById('fGift2Yr').value) || 0;
+
+        grossEstate = re + cash + movable + pubStock + privStock + rights + gift2Yr;
+        liquidCash = cash;
+        document.getElementById('txtDetailTotalGross').textContent = `總額：${grossEstate.toLocaleString()} 萬`;
+
+        // 附表七（不計入遺產總額之指定受益人壽險）
+        exemptIns = parseFloat(document.getElementById('fExemptIns').value) || 0;
+
+        // 附表八（完整扣除額）
+        if (document.getElementById('dSpouse').checked) totalDeductions += 553;
+        totalDeductions += (parseInt(document.getElementById('dAdultChild').value) || 0) * 56;
+        totalDeductions += (parseInt(document.getElementById('dParents').value) || 0) * 138;
+        totalDeductions += (parseInt(document.getElementById('dDisability').value) || 0) * 693;
+        totalDeductions += (parseInt(document.getElementById('dDependents').value) || 0) * 56;
+        totalDeductions += parseFloat(document.getElementById('dDebt').value) || 0;
+        totalDeductions += parseFloat(document.getElementById('dFarmLand').value) || 0;
+
+        // 未成年子女扣除額（基本56萬 + 距18歲年數*56萬）
+        minorChildrenAges.forEach(age => {
+            const yearsTo18 = Math.max(0, 18 - age);
+            totalDeductions += 56 + (yearsTo18 * 56);
+        });
+
+        // 配偶剩餘財產差額分配請求權
+        if (document.getElementById('dUseClaim').checked) {
+            totalDeductions += parseFloat(document.getElementById('dClaimAmount').value) || 0;
+        }
+
+        document.getElementById('txtDetailTotalDeduct').textContent = `總免扣額：${totalDeductions.toLocaleString()} 萬`;
     }
 
-    // 免稅額與扣除額
-    const deductions = 1333 + 138 +
-        (document.getElementById('chkSpouse').checked ? 553 : 0) +
-        ((parseInt(document.getElementById('numChild').value) || 0) * 56) +
-        ((parseInt(document.getElementById('numParents').value) || 0) * 138) +
-        ((parseInt(document.getElementById('numDisability').value) || 0) * 693) +
-        (document.getElementById('chkClaim').checked ? (parseFloat(document.getElementById('claimAmount').value) || 0) : 0);
+    const netEstate = Math.max(0, grossEstate - totalDeductions);
 
-    const netEstate = Math.max(0, totalAsset - deductions);
-
-    // 三級稅率
+    // 三級稅率試算（2026現行標準：5000萬以下10%、5000萬~1億15%累進差額250萬、1億以上20%累進差額750萬）
     let tax = 0;
     let rateStr = "免稅";
     if (netEstate > 0 && netEstate <= 5000) {
@@ -237,13 +551,22 @@ function calculateAll() {
     }
 
     tax = Math.round(tax);
-    cash = Math.round(cash);
-    const gap = tax > cash ? tax - cash : 0;
+    liquidCash = Math.round(liquidCash);
+    const totalAvailableForTax = liquidCash + exemptIns;
+    const gap = tax > totalAvailableForTax ? tax - totalAvailableForTax : 0;
 
-    // 介面更新
+    // 年齡槓桿更新
+    const age = parseInt(document.getElementById('insAge').value) || 55;
+    const leverage = getInsuranceLeverage(age);
+    document.getElementById('txtLeverage').textContent = `約 ${leverage.toFixed(1)} 倍`;
+
+    // 更新右側數據
     document.getElementById('valTax').textContent = tax.toLocaleString() + " 萬";
-    document.getElementById('valRate').textContent = "稅率: " + rateStr;
-    document.getElementById('valCash').textContent = cash.toLocaleString() + " 萬";
+    document.getElementById('valRate').textContent = `課稅淨額: ${Math.round(netEstate).toLocaleString()} 萬 (${rateStr})`;
+    document.getElementById('valCash').textContent = totalAvailableForTax.toLocaleString() + " 萬";
+    document.getElementById('valCashSub').textContent = exemptIns > 0 
+        ? `活存 ${liquidCash.toLocaleString()}萬 + 免稅保單 ${exemptIns.toLocaleString()}萬`
+        : `未完稅前銀行帳戶遭凍結`;
 
     const boxGap = document.getElementById('boxGap');
     const badgeGap = document.getElementById('badgeGap');
@@ -252,42 +575,47 @@ function calculateAll() {
     if (gap > 0) {
         boxGap.className = "p-2.5 rounded border bg-rose-950/40 border-rose-800 text-rose-200 text-xs";
         badgeGap.className = "px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-900 text-rose-100";
-        badgeGap.textContent = "缺口過大";
+        badgeGap.textContent = "存在缺口";
         valGap.className = "text-xl font-black text-rose-400 mt-0.5";
         valGap.textContent = "- " + gap.toLocaleString() + " 萬元";
+
+        document.getElementById('planANeed').textContent = `${gap.toLocaleString()} 萬`;
+        const insCost = Math.round(gap / leverage);
+        document.getElementById('planBCost').textContent = `約 ${insCost.toLocaleString()} 萬`;
     } else {
         boxGap.className = "p-2.5 rounded border bg-emerald-950/40 border-emerald-800 text-emerald-200 text-xs";
         badgeGap.className = "px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-900 text-emerald-100";
         badgeGap.textContent = "安全";
         valGap.className = "text-xl font-black text-emerald-400 mt-0.5";
-        valGap.textContent = "流動性充足";
+        valGap.textContent = "繳稅資金充足";
+
+        document.getElementById('planANeed').textContent = "0 萬";
+        document.getElementById('planBCost').textContent = "0 萬 (已足額)";
     }
 
-    renderChart(totalAsset - cash, cash, tax, gap);
+    renderChart(Math.max(0, grossEstate - liquidCash), liquidCash, exemptIns, gap);
 }
 
-function renderChart(illiquid, cash, tax, gap) {
+function renderChart(illiquid, cash, exemptIns, gap) {
     const ctx = document.getElementById('balanceChart').getContext('2d');
     if (chartInstance) chartInstance.destroy();
 
-    const chartData = gap > 0 
-        ? [illiquid, cash, gap]
-        : [illiquid, Math.max(0, cash - tax), tax];
+    const labels = ['非流動遺產', '帳上存款', '免稅保單給付'];
+    const data = [illiquid, cash, exemptIns];
+    const colors = ['#475569', '#3b82f6', '#06b6d4'];
 
-    const labels = gap > 0 
-        ? ['不流動資產', '自有現金', '稅源缺口']
-        : ['不流動資產', '稅後剩餘現金', '應納稅額'];
-
-    const colors = gap > 0 
-        ? ['#475569', '#3b82f6', '#f43f5e']
-        : ['#475569', '#10b981', '#f59e0b'];
+    if (gap > 0) {
+        labels.push('自籌稅源缺口');
+        data.push(gap);
+        colors.push('#f43f5e');
+    }
 
     chartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: labels,
             datasets: [{
-                data: chartData,
+                data: data,
                 backgroundColor: colors,
                 borderWidth: 0
             }]
@@ -295,7 +623,7 @@ function renderChart(illiquid, cash, tax, gap) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: false, // 關閉動畫，徹底防止連續 resize 事件觸發無限生長
+            animation: false,
             plugins: {
                 legend: { 
                     position: 'right', 
@@ -311,12 +639,17 @@ function renderChart(illiquid, cash, tax, gap) {
     });
 }
 
-// 監聽所有輸入
-document.querySelectorAll('input').forEach(input => {
-    input.addEventListener('input', calculateAll);
+// 監聽所有輸入與下拉選單
+document.addEventListener('input', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+        calculateAll();
+    }
 });
 
-window.onload = () => calculateAll();
+window.onload = () => {
+    renderMinorChildren();
+    calculateAll();
+};
 </script>
 
 </body>
